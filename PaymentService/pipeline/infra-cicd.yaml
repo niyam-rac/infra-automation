@@ -45,7 +45,7 @@ stages:
       - job: BuildInfra
         displayName: "Publish Infra"
         steps:
-          - template: ../../../shared/pipelines/templates/infra-build-tasks_v3.0.yaml
+          - template: ../../shared/pipelines/templates/infra-build-tasks_v3.0.yaml
             parameters:
               artifactName: "$(InfraArtifactName)"
               fileCopyPattern: "$(InfraFileCopyPattern)"
