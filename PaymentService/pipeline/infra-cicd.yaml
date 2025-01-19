@@ -50,24 +50,11 @@ stages:
               targetType: "inline"
               script: |
                 echo "Pipeline for PaymentService in infra-automation repo has started."
-
-          # Step 4: Log the values from project-vars.yaml (BUILD step)
-          - task: Project vars
-            displayName: "BUILD - Log values from project-vars.yaml"
-            inputs:
-              targetType: "inline"
-              script: |
                 echo "StaticWebsiteDomainNPE: $(StaticWebsiteDomainNPE)"
                 echo "StaticWebsiteDomainPRD: $(StaticWebsiteDomainPRD)"
                 echo "CustomDomainPrefix: $(CustomDomainPrefix)"
                 echo "ResourceGroupNameSuffix: $(ResourceGroupNameSuffix)"
                 echo "SvcAppStorageNameSuffix: $(SvcAppStorageNameSuffix)"
-
-          - task: Global vars
-            displayName: "BUILD - Log values from global-vars_v4.0.yaml"
-            inputs:
-              targetType: "inline"
-              script: |
                 echo "Authority: $(Authority)"
                 echo "TfStateResourceGroupNameSuffix: $(TfStateResourceGroupNameSuffix)"
                 echo "TfStateStorageNameSuffix: $(TfStateStorageNameSuffix)"
