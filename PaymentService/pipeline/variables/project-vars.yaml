@@ -12,7 +12,7 @@ variables:
   ProjectFolder: "PaymentService"
   InfraArtifactName: "infra"
   InfraFileCopyPattern: |
-    shared/infra/**
+    shared/infra/**a
     $(ProjectFolder)/$(ProjectInfraVersion)/infra/**
 
   ProjectKey: "paymentservice"

@@ -39,24 +39,13 @@ variables:
 stages:
   - stage: BUILD
     displayName: "Build"
+    pool:
+      vmImage: windows-latest
     jobs:
       - job: BuildInfra
-        displayName: "Publish Job"
+        displayName: "Publish Infra"
         steps:
-          # Step 1: Log a simple message
-          - task: Bash@3
-            displayName: "Start Build and Publish Infra"
-            inputs:
-              targetType: "inline"
-              script: |
-                echo "Pipeline for PaymentService in infra-automation repo has started."
-                echo "StaticWebsiteDomainNPE: $(StaticWebsiteDomainNPE)"
-                echo "StaticWebsiteDomainPRD: $(StaticWebsiteDomainPRD)"
-                echo "CustomDomainPrefix: $(CustomDomainPrefix)"
-                echo "ResourceGroupNameSuffix: $(ResourceGroupNameSuffix)"
-                echo "SvcAppStorageNameSuffix: $(SvcAppStorageNameSuffix)"
-                echo "Authority: $(Authority)"
-                echo "TfStateResourceGroupNameSuffix: $(TfStateResourceGroupNameSuffix)"
-                echo "TfStateStorageNameSuffix: $(TfStateStorageNameSuffix)"
-                echo "ApimFunctionKeyName: $(ApimFunctionKeyName)"
-                echo "SvcAppStagingSlotName: $(SvcAppStagingSlotName)"
+          - template: ../../../shared/pipelines/templates/infra-build-tasks_v3.0.yaml
+            parameters:
+              artifactName: "$(InfraArtifactName)"
+              fileCopyPattern: "$(InfraFileCopyPattern)"
