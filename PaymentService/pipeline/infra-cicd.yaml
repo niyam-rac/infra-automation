@@ -44,15 +44,15 @@ stages:
         displayName: "Publish Job"
         steps:
           # Step 1: Log a simple message
-          - task: Start Build and Publish Infra
-            displayName: " Start Build and Publish Infra"
+          - task: Bash@3
+            displayName: "Start Build and Publish Infra"
             inputs:
               targetType: "inline"
               script: |
                 echo "Pipeline for PaymentService in infra-automation repo has started."
 
           # Step 4: Log the values from project-vars.yaml (BUILD step)
-          - task: Display all values
+          - task: Bash@3
             displayName: "BUILD - Log values from project-vars.yaml"
             inputs:
               targetType: "inline"
