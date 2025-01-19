@@ -1,0 +1,31 @@
+trigger:
+  - main # Replace 'main' with your branch name if needed
+
+pool:
+  vmImage: "ubuntu-latest"
+
+steps:
+  # Step 1: Log a simple message
+  - task: Bash@3
+    displayName: "Log a simple message"
+    inputs:
+      targetType: "inline"
+      script: |
+        echo "Hello, Azure DevOps!"
+
+  # Step 2: Log current date and time
+  - task: Bash@3
+    displayName: "Log current date and time"
+    inputs:
+      targetType: "inline"
+      script: |
+        echo "Current date and time: $(date)"
+
+  # Step 3: Log environment variables
+  - task: Bash@3
+    displayName: "Log environment variables"
+    inputs:
+      targetType: "inline"
+      script: |
+        echo "Environment variables:"
+        env
