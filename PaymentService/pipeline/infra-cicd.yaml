@@ -32,6 +32,19 @@ pr:
 pool:
   vmImage: "ubuntu-latest"
 
+parameters:
+  # If the service app resource had already been created, forcing the app infra deploying will clean up
+  # all contents/functions/configurations from the app resource and then re-deploy a new app resource instance.
+  # The service will be offline during this process.
+  - name: forceAppInfraRedeploy
+    displayName: "Force SvcApp Infra Redeploying"
+    type: boolean
+    default: false
+  - name: OverrideBranchRequirement
+    displayName: "Override main branch requirement? (Only affects SIT)"
+    type: boolean
+    default: false
+
 variables:
   - template: ../../shared/pipelines/variables/global-vars_v4.0.yaml
   - template: variables/project-vars.yaml
