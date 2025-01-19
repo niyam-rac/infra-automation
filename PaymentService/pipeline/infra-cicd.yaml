@@ -94,7 +94,7 @@ stages:
           runOnce:
             deploy:
               steps:
-                - template: "../../../shared/pipelines/templates/infra-deploy-tasks_v4.1.yaml"
+                - template: "../../shared/pipelines/templates/infra-deploy-tasks_v4.1.yaml"
                   parameters:
                     projectAzConnection: "${{ variables.projectAzConnection }}"
                     envKey: "$(envKey)"
