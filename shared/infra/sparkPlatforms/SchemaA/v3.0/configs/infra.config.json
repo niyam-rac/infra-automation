@@ -1,0 +1,33 @@
+{
+  "common": {
+    "authority": "racwa",
+    "svcAppStagingSlotName": "staging",
+    "resourceTagsShared": {
+      "Company": "Insurance",
+      "CostCentre": "0104",
+      "BusinessUnit": "RACI Business Systems Services",
+      "Department": "Service Delivery"
+    }
+  },
+  "dev": {
+    "resourceTagsEnv": {
+      "Environment": "dev"
+    }
+  },
+  "sit": {
+    "resourceTagsEnv": {
+      "Environment": "sit"
+    }
+  },
+  "uat": {
+    "resourceTagsEnv": {
+      "Environment": "uat"
+    }
+  },
+  "prd": {
+    "resourceTagsEnv": {
+      "Environment": "prd"
+    }
+  }
+}
+  

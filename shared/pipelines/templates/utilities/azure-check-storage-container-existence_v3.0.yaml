@@ -1,0 +1,47 @@
+parameters:
+  - name: azConnection
+    displayName: 'Azure Connection'
+    type: string
+    default: ''
+  - name: resourceGroupName
+    displayName: 'Resource Group Name'
+    type: string
+    default: ''
+  - name: storageAccountName
+    displayName: 'Storage Account Name'
+    type: string
+    default: ''
+  - name: containerName
+    displayName: 'Container Name'
+    type: string
+    default: ''
+
+steps:
+  - task: AzureCLI@2
+    displayName: 'Check TF Storage Container'
+    inputs:
+      azureSubscription: ${{parameters.azConnection}}
+      scriptType: pscore
+      scriptLocation: inlineScript
+      inlineScript: |
+        $storageResourceGroup = ("${{parameters.resourceGroupName}}").ToUpper()
+        $storageAccountName = ("${{parameters.storageAccountName}}").ToLower()
+        $containerName = ("${{parameters.containerName}}").ToLower()
+
+        $storageAccountQuery = ((az storage account list -g $storageResourceGroup --query "[?name == '$($storageAccountName)']") | ConvertFrom-Json)
+        if ($storageAccountQuery.Count -eq 0)
+        {
+            Write-Error "Error: Storage account not found: $($storageAccountName)."
+            exit 1
+        }
+        $storageAccountKey = (az storage account keys list -g $storageResourceGroup -n $storageAccountName | ConvertFrom-Json)[0].value
+        $containerExists = (az storage container exists --account-name $storageAccountName --account-key $storageAccountKey --name $containerName | ConvertFrom-Json).exists
+        if (-NOT $containerExists)
+        {
+            Write-Host "Info: Container $($containerName) not found in $($storageAccountName). Creating now ..."
+            $containerCreating = (az storage container create --name $containerName --account-name $storageAccountName --account-key $storageAccountKey | ConvertFrom-Json).created
+            Write-Host "Info: Container $($containerName) creating result: $($containerCreating). "
+        }
+        else {
+            Write-Host "Info: Container $($containerName) exists in $($storageAccountName)."
+        }

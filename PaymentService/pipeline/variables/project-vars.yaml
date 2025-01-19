@@ -1,0 +1,29 @@
+variables:
+  ################ Project Terraform Variables (Begin) ################
+  # PLEASE MAKE SURE THAT ANY CHANGE TO THESE VARIABLES AFTER RESOURCES BEING DEPLOYED
+  # HAS TO BE APPLIED TO THE STATE FILES IN AZURE STORAGE AS WELL
+  ProjectInfraVersion: "v1.0"
+  TfStateContainerNamePrefix: "payment-service"
+  ################ Project Terraform Variables (End) ################
+
+  ################ Project Variables ################
+  ReleaseVersionPrefix: "1.0"
+  ParentModuleNamePrefix: "byteBusters"
+  ProjectFolder: "PaymentService"
+  InfraArtifactName: "infra"
+  InfraFileCopyPattern: |
+    shared/infra/**
+    $(ProjectFolder)/$(ProjectInfraVersion)/infra/**
+
+  ProjectKey: "paymentservice"
+  StaticWebsiteDomainNPE: "paymentservice.ractest.com.au"
+  StaticWebsiteDomainPRD: "paymentservice.rac.com.au"
+  CustomDomainPrefix: "paymentservice"
+  ResourceGroupNameSuffix: "payment"
+  SvcAppStorageNameSuffix: "paymentsvc"
+  SvcAppNameSuffix: "paymentsvc"
+  SvcAppApimFunctionKeySecretNamePrefix: "BFFFunctionKey-paymentservice"
+  KeyvaultNameSuffix: "paymentsvc"
+  SvcAppUserManagedIdentityNameNPE: "racwa-umi-npe-ins-paymentservice"
+  SvcAppUserManagedIdentityNamePRD: "racwa-umi-prd-ins-paymentservice"
+  BFFRepositoryName: "bb-payment-service"

@@ -1,0 +1,509 @@
+parameters:
+  - name: projectAzConnection
+    displayName: 'Project Azure Connection Name'
+    type: string
+
+  - name: isPrimaryRegion
+    displayName: 'isPrimaryRegion'
+    type: boolean
+
+  - name: deploymentStep
+    displayName: 'Deployment Step'
+    type: string
+
+  - name: parentModuleNamePrefix
+    displayName: 'parentModuleNamePrefix'
+    type: string
+
+  - name: infraCodeDirectory
+    displayName: 'Infra Code Directory'
+    type: string
+
+  - name: envKey
+    displayName: 'Environment Key'
+    type: string
+
+  - name: regionKey
+    displayName: 'Region Key'
+    type: string
+
+  - name: terraformCommand
+    displayName: 'Terraform Command'
+    type: string
+    default: 'plan'
+
+  - name: tfImportResources
+    displayName: 'tfImportResources'
+    type: boolean
+    default: false
+
+  - name: tfstateResourceGroupName
+    displayName: 'Resource Group Name that TF state files in'
+    type: string
+
+  - name: tfstateStorageAccountName
+    displayName: 'Storage Account Name that TF state files in'
+    type: string
+
+  - name: tfstateAzConnection
+    displayName: 'Azure Connection Name for TF State'
+    type: string
+
+  - name: tfstateStorageSubscriptionId
+    displayName: 'Subscription Id that the TF State Storage Account in'
+    type: string
+
+  - name: tfstateContainerName
+    displayName: 'Container Name that TF state files in'
+    type: string
+
+  - name: tfstateKeyFileName
+    displayName: 'TF State Key file name'
+    type: string
+
+  - name: releaseVersion
+    displayName: 'Release Version'
+    type: string
+    default: ''
+
+  - name: projectResourceGroupName
+    displayName: 'Project Resource Group Name'
+    type: string
+
+  - name: faStorageAccountName
+    displayName: 'FA Storage Account Name'
+    type: string
+    default: ''
+
+  - name: dataStorageAccountName
+    displayName: 'Data Storage Account Name'
+    type: string
+    default: ''
+
+  - name: dataStorageResourceGroup
+    displayName: 'Data Storage Account Resource Group'
+    type: string
+    default: ''
+
+  - name: forceAppInfraRedeploy
+    displayName: 'forceAppInfraRedeploy'
+    type: boolean
+
+  - name: svcAppName
+    displayName: 'Service App Name'
+    type: string
+
+  - name: infraCodeRootDirectory
+    displayName: 'infraCodeRootDirectory'
+    type: string
+    default: '$(Build.SourcesDirectory)'
+
+  - name: logAnalyticsName
+    displayName: 'logAnalyticsName'
+    type: string
+
+  - name: appInsightsName
+    displayName: 'appInsightsName'
+    type: string
+
+  - name: appServicePlanName
+    displayName: 'appServicePlanName'
+    type: string
+    default: ''
+
+  - name: keyVaultName
+    displayName: 'keyVaultName'
+    type: string
+    default: ''
+
+  - name: staticWebAppName
+    displayName: 'staticWebAppName'
+    type: string
+    default: ''
+
+  - name: stagingSlotName
+    displayName: 'stagingSlotName'
+    type: string
+    default: ''
+
+  - name: userManagedIdentityName
+    displayName: 'userManagedIdentityName'
+    type: string
+
+  - name: apimName
+    displayName: 'apimName'
+    type: string
+
+  - name: projectName
+    displayName: 'Project Name'
+    type: string
+    default: ''
+
+  - name: githubActionsIdentityName
+    displayName: 'GitHub Actions Identity Name'
+    type: string
+
+steps:
+  - ${{ if parameters.tfImportResources }}:
+      - task: AzureCLI@2
+        displayName: 'Import resources - ${{ parameters.deploymentStep }}'
+        inputs:
+          azureSubscription: ${{parameters.projectAzConnection}}
+          scriptType: ps
+          scriptLocation: inlineScript
+          inlineScript: |
+            $projectResourceGroup = "${{parameters.projectResourceGroupName}}"
+            $isPrimaryRegion = [System.Convert]::ToBoolean("${{parameters.isPrimaryRegion}}")
+            $regionKey = "${{ parameters.regionKey }}"
+
+            $deploymentStep = ("${{parameters.deploymentStep}}").ToLower()
+            $parentModuleNamePrefix = "${{parameters.parentModuleNamePrefix}}"
+            $infraCodeDirectory = "${{parameters.infraCodeDirectory}}"
+            $infraCodeRootDirectory = "${{parameters.infraCodeRootDirectory}}"
+
+            $logAnalyticsName = ("${{parameters.logAnalyticsName}}").ToLower()
+            $appInsightsName = ("${{parameters.appInsightsName}}").ToLower()
+            $faStorageAccountName = ("${{parameters.faStorageAccountName}}").ToLower()
+            $appServicePlanName = ("${{parameters.appServicePlanName}}").ToLower()
+            $keyVaultName = ("${{parameters.keyVaultName}}").ToLower()
+            $staticWebAppName = ("${{parameters.staticWebAppName}}").ToLower()
+            $functionAppName = ("${{parameters.svcAppName}}").ToLower()
+            $stagingSlotName = ("${{parameters.stagingSlotName}}").ToLower()
+            $envKey = ("${{parameters.envKey}}").ToUpper()
+            $appIdentityName = ("${{parameters.userManagedIdentityName}}").ToLower()
+            $apimName = ("${{parameters.apimName}}").ToUpper()
+            $dataStorageAccountName = ("${{parameters.dataStorageAccountName}}").ToLower()
+            $dataStorageResourceGroup = ("${{parameters.dataStorageResourceGroup}}").ToLower()
+            $githubActionsIdentityName = ("${{parameters.githubActionsIdentityName}}").ToLower()
+
+            if ($envKey -eq "PRD")
+            {
+              $pipelineSpEnvKey = "PRD"
+            }
+            else {
+              $pipelineSpEnvKey = "NPE"
+            }
+
+            $sourceFolderName = "$($infraCodeRootDirectory)\$($infraCodeDirectory)\$($deploymentStep)"
+            $targetFileName = "import.tf"
+
+            $tfAddressesMap = Get-Content -Raw -Path "$($infraCodeRootDirectory)\shared\infra\sparkPlatforms\SchemaA\v4.0\configs\tf-resource-address-map.json" | ConvertFrom-Json
+            $contentHash = @{}
+
+            if ($deploymentStep -eq "essentials")
+            {
+              $parentModuleName = "$($parentModuleNamePrefix)Essentials"
+              $logAnalyticsId = (az resource list -g $projectResourceGroup -n "$($logAnalyticsName)" --resource-type "$($tfAddressesMap.logAnalytics.AzureProvider)" --query "[0].{id:id,name:name}" | ConvertFrom-Json).id
+              if (![string]::IsNullOrEmpty($logAnalyticsId)) {
+                $contentHash.Add("logAnalytics", @{
+                    id      = "$($logAnalyticsId)"
+                    address = $tfAddressesMap.logAnalytics.Address
+                  })
+              }
+
+              $appInsightsId = (az resource list -g $projectResourceGroup -n "$($appInsightsName)" --resource-type "$($tfAddressesMap.appInsights.AzureProvider)" --query "[0].{id:id,name:name}" | ConvertFrom-Json).id
+              if (![string]::IsNullOrEmpty($appInsightsId)) {
+                $contentHash.Add("appInsights", @{
+                    id      = "$($appInsightsId)"
+                    address = $tfAddressesMap.appInsights.Address
+                  })
+              }
+
+              if (![string]::IsNullOrEmpty($faStorageAccountName))
+              {
+                $faStorageAccountId = (az resource list -g $projectResourceGroup -n "$($faStorageAccountName)" --resource-type "$($tfAddressesMap.faStorageAccount.AzureProvider)" --query "[0].{id:id,name:name}" | ConvertFrom-Json).id
+                if (![string]::IsNullOrEmpty($faStorageAccountId)) {
+                  $contentHash.Add("faStorageAccount", @{
+                      id      = "$($faStorageAccountId)"
+                      address = $tfAddressesMap.faStorageAccount.Address
+                    })
+                }
+              }
+
+              if (![string]::IsNullOrEmpty($dataStorageAccountName))
+              {
+                $dataStorageAccountId = (az resource list -n "$($dataStorageAccountName)" --resource-type "$($tfAddressesMap.dataStorageAccount.AzureProvider)" --query "[0].{id:id,name:name}" | ConvertFrom-Json).id
+                if (![string]::IsNullOrEmpty($dataStorageAccountId)) {
+                  $contentHash.Add("dataStorageAccount", @{
+                      id      = "$($dataStorageAccountId)"
+                      address = $tfAddressesMap.dataStorageAccount.Address
+                    })
+                }
+              }
+
+              if (![string]::IsNullOrEmpty($appServicePlanName))
+              {
+                $appServicePlanId = (az resource list -g $projectResourceGroup -n "$($appServicePlanName)" --resource-type "$($tfAddressesMap.appServicePlan.AzureProvider)" --query "[0].{id:id,name:name}" | ConvertFrom-Json).id
+                if (![string]::IsNullOrEmpty($appServicePlanId)) {
+                  # There is a Microsoft bug that the app service plan id can not be found in terraform due to the upper case of "F" in the type
+                  # $appServicePlanId = $appServicePlanId.Replace("Microsoft.Web/serverFarms", "Microsoft.Web/serverfarms")
+                  $contentHash.Add("appServicePlan", @{
+                      id      = "$($appServicePlanId)"
+                      address = $tfAddressesMap.appServicePlan.Address
+                    })
+                }
+              }
+
+              # Only import keyvault if it is deployed from this region
+              if ($keyVaultName -like "*$regionKey*") {
+                $keyVaultId = (az resource list -g $projectResourceGroup -n "$($keyVaultName)" --resource-type "$($tfAddressesMap.keyVault.AzureProvider)" --query "[0].{id:id,name:name}" | ConvertFrom-Json).id
+                if (![string]::IsNullOrEmpty($keyVaultId)) {
+                  $contentHash.Add("keyVault", @{
+                      id      = "$($keyVaultId)"
+                      address = $tfAddressesMap.keyVault.Address
+                    })
+                  # Get key vault access policies
+                  $keyVaultAccessPolicyObjIds = (az keyvault show -n "$($keyVaultName)" -g $projectResourceGroup --query "properties.accessPolicies[].objectId") | ConvertFrom-Json
+                  Write-Output "keyVaultAccessPolicyObjIds = $keyVaultAccessPolicyObjIds"
+                  if ($keyVaultAccessPolicyObjIds.Count -gt 0)
+                  {
+                    $roleGroupHash = @{}
+                    $roleGroupHash.Add("InsOperations", "Role-IT-Insurance-Operations-Admin")
+                    $roleGroupHash.Add("InsDevelopers", "Role-IT-Insurance-Developers-Admin")
+                    $roleGroupHash.Add("InsTesters", "Role-IT-Insurance-Testers-Admin")
+                    $roleGroupHash.Add("InsPipelineServicePrincipals", "Role-Azure-INS-Pipeline-ServicePrincipals-$($pipelineSpEnvKey)")
+
+                    foreach($key in $roleGroupHash.Keys)
+                    {
+                      $objId = (az ad group list --filter "displayName eq '$($roleGroupHash[$key])'" --query "[].id" -o tsv)
+                      Write-Host "$($roleGroupHash[$key]) ObjectId = $objId"
+                      if (![string]::IsNullOrEmpty($objId) -AND $keyVaultAccessPolicyObjIds.Contains($objId))
+                      {
+                        #Write-Host "$key Address: $($tfAddressesMap.keyVaultAccessPolicyGroup.$key.Address)"
+                        $contentHash.Add("keyvaultAccess$($key)", @{
+                          id      = "$($keyVaultId)/objectId/$($objId)"
+                          address = $tfAddressesMap.keyVaultAccessPolicyGroup.$key.Address
+                        })
+                      }
+                    }
+
+                    $appIdentityObjId = (az ad sp list --filter "displayName eq '$($appIdentityName)'" --query "[].id" -o tsv)
+                    if (![string]::IsNullOrEmpty($appIdentityObjId) -AND $keyVaultAccessPolicyObjIds.Contains($appIdentityObjId))
+                    {
+                      Write-Host "$($appIdentityName) ObjectId = $appIdentityObjId"
+                      $contentHash.Add("keyvaultAccessAppIdentity", @{
+                        id      = "$($keyVaultId)/objectId/$($appIdentityObjId)"
+                        address = $tfAddressesMap.keyVaultAccessPolicyServicePrincipal.AppIdentity.Address
+                      })
+                    }
+
+                    $apimIdentityObjId = (az ad sp list --filter "displayName eq '$($apimName)'" --query "[].id" -o tsv)
+                    if (![string]::IsNullOrEmpty($apimIdentityObjId) -AND $keyVaultAccessPolicyObjIds.Contains($apimIdentityObjId))
+                    {
+                      Write-Host "$($apimName) ObjectId = $apimIdentityObjId"
+                      $contentHash.Add("apimAccessIdentity", @{
+                        id      = "$($keyVaultId)/objectId/$($apimIdentityObjId)"
+                        address = $tfAddressesMap.keyVaultAccessPolicyApimManagedIdentity.ApimAppIdentity.Address
+                      })
+                    }
+
+                    $githubActionsIdentityObjId = (az ad sp list --filter "displayName eq '$($githubActionsIdentityName)'" --query "[].id" -o tsv)
+                    if (![string]::IsNullOrEmpty($githubActionsIdentityObjId) -AND $keyVaultAccessPolicyObjIds.Contains($githubActionsIdentityObjId))
+                    {
+                      Write-Host "$($githubActionsIdentityName) ObjectId = $githubActionsIdentityObjId"
+                      $contentHash.Add("githubActionsIdentity", @{
+                        id      = "$($keyVaultId)/objectId/$($githubActionsIdentityObjId)"
+                        address = $tfAddressesMap.keyVaultAccessPolicyGitHubActionsIdentity.GitHubActionsIdentity.Address
+                      })
+                    }
+                  }
+                }
+                if (![string]::IsNullOrEmpty($staticWebAppName)) {
+                  $staticWebAppId = (az resource list -g $projectResourceGroup -n "$($staticWebAppName)" --resource-type "$($tfAddressesMap.staticWebApp.AzureProvider)" --query "[0].{id:id,name:name}" | ConvertFrom-Json).id
+                  if (![string]::IsNullOrEmpty($staticWebAppId)) {
+                    $contentHash.Add("staticWebApp", @{
+                        id      = "$($staticWebAppId)"
+                        address = $tfAddressesMap.staticWebApp.Address
+                      })
+                  }
+                }
+              }
+            }
+            else {
+              $parentModuleName = "$($parentModuleNamePrefix)Apps"
+              $functionAppId = (az resource list -g $projectResourceGroup -n "$($functionAppName)" --resource-type "$($tfAddressesMap.functionApp.AzureProvider)" --query "[0].{id:id,name:name}" | ConvertFrom-Json).id
+              if (![string]::IsNullOrEmpty($functionAppId)) {
+                $contentHash.Add("functionApp", @{
+                    id      = "$($functionAppId)"
+                    address = $tfAddressesMap.functionApp.Address
+                  })
+              }
+
+              if (![string]::IsNullOrEmpty($stagingSlotName))
+              {
+                $functionAppSlotId = (az resource list -g $projectResourceGroup -n "$($functionAppName)/$($stagingSlotName)" --resource-type "$($tfAddressesMap.functionAppSlot.AzureProvider)" --query "[0].{id:id,name:name}" | ConvertFrom-Json).id
+                if (![string]::IsNullOrEmpty($functionAppSlotId)) {
+                  $contentHash.Add("functionAppSlot", @{
+                      id      = "$($functionAppSlotId)"
+                      address = $tfAddressesMap.functionAppSlot.Address
+                    })
+                }
+              }
+            }
+
+            # $contentHash | ConvertTo-Json
+
+            $importCotent = [System.Text.StringBuilder]::new()
+            foreach ($_ in $contentHash.Keys)
+            {
+              $importCotent.AppendLine(@"
+            import {
+              id = "$($contentHash[$_].id)"
+              to = module.$($parentModuleName).$($contentHash[$_].address)
+            }
+            "@)
+              # Append an extra empty line
+              $importCotent.AppendLine("")
+            }
+
+            # $importCotent.ToString()
+            Set-Content -Path $(Join-Path -Path "$($sourceFolderName)" -ChildPath $targetFileName) -Value $($importCotent.ToString())
+            Write-Host "File $targetFileName generated in $($sourceFolderName)"
+            $files = Get-ChildItem -Path "$($sourceFolderName)"
+            foreach ($_ in $files)
+            {
+              Write-Host $_.Name
+            }
+            Get-Content -Raw -Path $(Join-Path -Path "$($sourceFolderName)" -ChildPath $targetFileName)
+
+  - task: AzureCLI@2
+    displayName: 'Init condition - ${{ parameters.deploymentStep }}'
+    inputs:
+      azureSubscription: ${{parameters.projectAzConnection}}
+      scriptType: ps
+      scriptLocation: inlineScript
+      inlineScript: |
+        Write-Host "Initialize ProcessTasks = FALSE for the ${{ parameters.deploymentStep }} deployment step"
+        Write-Host "##vso[task.setvariable variable=ProcessTasks;]$($false)"
+
+  - task: AzureCLI@2
+    displayName: 'Condition check - ${{ parameters.deploymentStep }}'
+    inputs:
+      azureSubscription: ${{parameters.projectAzConnection}}
+      scriptType: ps
+      scriptLocation: inlineScript
+      inlineScript: |
+        $forceAppInfraRedeploy = [System.Convert]::ToBoolean("${{parameters.forceAppInfraRedeploy}}")
+        $projectResourceGroup = ("${{parameters.projectResourceGroupName}}").ToUpper()
+        $faStorageAccountName = ("${{parameters.faStorageAccountName}}").ToLower()
+        $svcAppName = "${{parameters.svcAppName}}".ToLower()
+
+        Write-Host "Force App Infra Redeploying = $forceAppInfraRedeploy"
+        $processTasks = $true
+        if ("${{ parameters.deploymentStep }}" -EQ "apps")
+        {
+
+          $faStorageAccountQuery = ((az storage account list -g $projectResourceGroup --query "[?name == '$($faStorageAccountName)']") | ConvertFrom-Json)
+          $faStorageAccountExists = ($faStorageAccountQuery.Count -gt 0)
+          if (-NOT $faStorageAccountExists)
+          {
+             # If the storage account that attaches to the app does not exist, then the deployment for the apps step is not applicable.
+            Write-Host "Function app dependencies NOT FOUND."
+            $processTasks = $false
+          }
+          else
+          {
+            # Check if the service app resource exists.
+            $svcAppList = (az functionapp list -g $projectResourceGroup --query "[].{defaultHostName:defaultHostName}[? contains(defaultHostName,'$svcAppName')]") | ConvertFrom-Json
+            $svcAppExists = ($svcAppList.Count -gt 0)
+            Write-Output "Existence of the service App = $svcAppExists"
+            if ($svcAppExists -AND (-NOT $forceAppInfraRedeploy))
+            {
+              $processTasks = $false
+            }
+          }
+        }
+        Write-Host "ProcessTasks = $processTasks for the ${{ parameters.deploymentStep }} deployment step"
+        Write-Host "##vso[task.setvariable variable=ProcessTasks;]$($processTasks)"
+
+  - task: TerraformTaskV4@4
+    displayName: 'TF init - ${{ parameters.deploymentStep }}'
+    condition: eq(variables.ProcessTasks, 'True')
+    inputs:
+      backendServiceArm: '${{parameters.tfstateAzConnection}}'
+      workingDirectory: '$(System.DefaultWorkingDirectory)/${{ parameters.infraCodeDirectory }}/${{ parameters.deploymentStep }}'
+      backendAzureRmResourceGroupName: '${{ parameters.tfstateResourceGroupName }}'
+      backendAzureRmStorageAccountName: '${{ parameters.tfstateStorageAccountName }}'
+      backendAzureRmContainerName: '${{ parameters.tfstateContainerName }}'
+      backendAzureRmKey: '${{ parameters.tfstateKeyFileName }}'
+      backendAzureRmSubscriptionId: '${{ parameters.tfstateStorageSubscriptionId }}'
+
+  - ${{ if eq(parameters.terraformCommand, 'plan') }}:
+      - task: TerraformTaskV4@4
+        displayName: 'TF ${{ parameters.terraformCommand }} - ${{ parameters.deploymentStep }}'
+        condition: eq(variables.ProcessTasks, 'True')
+        inputs:
+          command: ${{ parameters.terraformCommand }}
+          environmentServiceNameAzureRM: '${{parameters.projectAzConnection}}'
+          workingDirectory: '$(System.DefaultWorkingDirectory)/${{ parameters.infraCodeDirectory }}/${{ parameters.deploymentStep }}'
+          commandOptions: >
+            -out=${{ parameters.deploymentStep }}.tfplan
+            -input=false
+            -var envKey=${{ parameters.envKey }}
+            -var regionKey=${{ parameters.regionKey }}
+            -var "releaseVersion=${{ parameters.releaseVersion }}"
+            -var "pipelineId=$(System.TeamProject)-$(System.DefinitionId)"
+  - ${{ else }}:
+      - task: TerraformTaskV4@4
+        displayName: 'TF ${{ parameters.terraformCommand }} - ${{ parameters.deploymentStep }}'
+        condition: eq(variables.ProcessTasks, 'True')
+        inputs:
+          command: ${{ parameters.terraformCommand }}
+          environmentServiceNameAzureRM: '${{parameters.projectAzConnection}}'
+          workingDirectory: '$(System.DefaultWorkingDirectory)/${{ parameters.infraCodeDirectory }}/${{ parameters.deploymentStep }}'
+          commandOptions: >
+            -input=false
+            -var envKey=${{ parameters.envKey }}
+            -var regionKey=${{ parameters.regionKey }}
+            -var "releaseVersion=${{ parameters.releaseVersion }}"
+            -var "pipelineId=$(System.TeamProject)-$(System.DefinitionId)"
+
+  - ${{ if eq(parameters.terraformCommand, 'plan') }}:
+      - task: TerraformTaskV4@4
+        name: TerraformPlanShow_${{ parameters.deploymentStep }}
+        displayName: 'TF show - ${{ parameters.deploymentStep }}'
+        condition: eq(variables.ProcessTasks, 'True')
+        inputs:
+          command: show
+          outputTo: file
+          outputFormat: default
+          environmentServiceNameAzureRM: '${{parameters.projectAzConnection}}'
+          workingDirectory: '$(System.DefaultWorkingDirectory)/${{ parameters.infraCodeDirectory }}/${{ parameters.deploymentStep }}'
+          commandOptions: ${{ parameters.deploymentStep }}.tfplan -no-color
+          fileName: 'PlanOutput.readable.tfplan'
+
+      - task: PowerShell@2
+        name: PlanOutput_${{ parameters.deploymentStep }}
+        displayName: 'Set plan output to variable'
+        inputs:
+          targetType: 'inline'
+          # The weird replacement is for multiline strings not being supported as variables
+          # https://stackoverflow.com/questions/72223883/in-azure-pipelines-how-to-post-a-dynamic-multi-line-comment-generated-in-a-prev
+          script: |
+            $PlanOutput = Get-Content -Path PlanOutput.readable.tfplan -Encoding UTF8 -Raw
+            $FormattedPlanOutput = $PlanOutput -replace "`n", "%0D%0A"
+
+            $Environment = "${{ parameters.envKey }}".ToUpper()
+            $Region = "${{ parameters.regionKey }}".ToUpper()
+
+            Write-Host "##vso[task.setvariable variable=PlanOutput]$FormattedPlanOutput"
+            Write-Host "##vso[task.setvariable variable=Environment]$Environment"
+            Write-Host "##vso[task.setvariable variable=Region]$Region"
+
+      - task: GitHubComment@0
+        displayName: 'Create comment for ${{ parameters.deploymentStep }}'
+        condition: and(not(eq(variables['System.PullRequest.PullRequestNumber'], '')), not(eq(variables['PlanOutput'], '')))
+        inputs:
+          gitHubConnection: 'racwa'
+          repositoryName: '$(Build.Repository.Name)'
+          id: $(System.PullRequest.PullRequestNumber)
+          comment: |-
+            ### Plan for  ${{ parameters.projectName }} $(Environment) - ${{ parameters.deploymentStep }} - $(Region)
+
+            <details>
+              <summary>Click me to view the plan</summary>
+
+              ```hcl
+              $(PlanOutput)
+              ```
+            </details>

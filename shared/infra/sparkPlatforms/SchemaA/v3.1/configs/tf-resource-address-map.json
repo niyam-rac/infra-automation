@@ -1,0 +1,62 @@
+{
+  "logAnalytics": {
+    "AzureProvider": "Microsoft.OperationalInsights/workspaces",
+    "Address": "module.logAnalyticsModules.azurerm_log_analytics_workspace.logAnalyticsWorkspace"
+  },
+  "appInsights": {
+    "AzureProvider": "Microsoft.Insights/components",
+    "Address": "module.appInsightsModules.azurerm_application_insights.appInsights"
+  },
+  "staticWebApp": {
+    "AzureProvider": "Microsoft.Web/staticSites",
+    "Address": "module.staticWebAppModules[0].azurerm_static_site.staticWebApp"
+  },
+  "keyVault": {
+    "AzureProvider": "Microsoft.KeyVault/vaults",
+    "Address": "module.keyvaultModules.azurerm_key_vault.keyvault"
+  },
+  "keyVaultAccessPolicyGroup": {
+    "InsOperations": {
+      "Address": "module.keyvaultModules.azurerm_key_vault_access_policy.keyvaultAccessPolicyInsOperations"
+    },
+    "InsDevelopers": {
+      "Address": "module.keyvaultModules.azurerm_key_vault_access_policy.keyvaultAccessPolicyInsDevelopers[0]"
+    },
+    "InsTesters": {
+      "Address": "module.keyvaultModules.azurerm_key_vault_access_policy.keyvaultAccessPolicyInsTesters[0]"
+    },
+    "InsPipelineServicePrincipals": {
+      "Address": "module.keyvaultModules.azurerm_key_vault_access_policy.keyvaultAccessPolicyInsPipelineServicePrincipals"
+    }
+  },
+  "keyVaultAccessPolicyServicePrincipal": {
+    "AppIdentity": {
+      "Address": "module.keyvaultModules.azurerm_key_vault_access_policy.keyvaultAccessPolicyAppIdentity"
+    }
+  },
+  "keyVaultAccessPolicyApimManagedIdentity": {
+    "ApimAppIdentity": {
+      "Address": "module.keyvaultModules.azurerm_key_vault_access_policy.keyvaultAccessPolicyApimManagedIdentity"
+    }
+  },
+  "faStorageAccount": {
+    "AzureProvider": "Microsoft.Storage/storageAccounts",
+    "Address": "module.faStorageAccountModules.azurerm_storage_account.storageAccount"
+  },
+  "dataStorageAccount": {
+    "AzureProvider": "Microsoft.Storage/storageAccounts",
+    "Address": "module.dataStorageAccountModules[0].azurerm_storage_account.storageAccount"
+  },
+  "appServicePlan": {
+    "AzureProvider": "Microsoft.Web/serverfarms",
+    "Address": "module.appServicePlanModules[0].azurerm_service_plan.appServicePlan"
+  },
+  "functionApp": {
+    "AzureProvider": "Microsoft.Web/sites",
+    "Address": "module.functionAppModules.azurerm_linux_function_app.functionApp"
+  },
+  "functionAppSlot": {
+    "AzureProvider": "Microsoft.Web/sites/slots",
+    "Address": "module.functionAppModules.azurerm_linux_function_app_slot.functionAppSlot[0]"
+  }
+}

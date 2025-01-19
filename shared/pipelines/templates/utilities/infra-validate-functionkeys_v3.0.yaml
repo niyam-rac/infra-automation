@@ -1,0 +1,81 @@
+parameters:
+  - name: projectAzConnection
+    displayName: 'Project Azure Connection Name'
+    type: string
+
+  - name: projectResourceGroupNameFormat
+    displayName: 'projectResourceGroupNameFormat'
+    type: string
+
+  - name: svcAppNameFormat
+    displayName: 'svcAppNameFormat'
+    type: string
+
+  - name: regionsForFuncKeysToBeValidated
+    displayName: 'regionsForFuncKeysToBeValidated'
+    type: string
+
+  - name: apimFunctionKeyName
+    displayName: 'apimFunctionKeyName'
+    type: string
+
+  - name: stagingSlotName
+    displayName: 'stagingSlotName'
+    type: string
+    default: ''
+
+steps:
+  - task: AzureCLI@2
+    displayName: 'Validate function keys'
+    inputs:
+      azureSubscription: ${{parameters.projectAzConnection}}
+      scriptType: pscore
+      scriptLocation: inlineScript
+      inlineScript: |
+        $svcAppNameFormat = "${{parameters.svcAppNameFormat}}"
+        $projectResourceGroupNameFormat = "${{parameters.projectResourceGroupNameFormat}}"
+        $regionsForFuncKeysToBeValidated = "${{parameters.regionsForFuncKeysToBeValidated}}"
+        $apimFunctionKeyName = "${{parameters.apimFunctionKeyName}}"
+        $stagingSlotName = "${{parameters.stagingSlotName}}"
+
+        $regionKeyList = $regionsForFuncKeysToBeValidated.Split(",")
+        $functionKeyValueObjects = @()
+
+        Write-Host "Start validating function keys ..."
+        Write-Host "Regions to Validate: $($regionKeyList)"
+
+        foreach ($regionKey in $regionKeyList)
+        {
+          $functionAppName = $svcAppNameFormat.Replace("{REGIONKEY}", $regionKey)
+          $resourceGroupName = $projectResourceGroupNameFormat.Replace("{REGIONKEY}", $regionKey)
+
+          $functionKeyValue = (az functionapp keys list -g "$($resourceGroupName)" -n "$($functionAppName)" --query "functionKeys.$($apimFunctionKeyName)") | ConvertFrom-Json
+          $functionKeyValueObjects += $functionKeyValue
+
+          if (-NOT [string]::IsNullOrEmpty($stagingSlotName))
+          {
+            $stagingSlotFunctionKeyValue = (az functionapp keys list -g "$($resourceGroupName)" -n "$($functionAppName)" --slot "$($stagingSlotName)" --query "functionKeys.$($apimFunctionKeyName)") | ConvertFrom-Json
+            $functionKeyValueObjects += $stagingSlotFunctionKeyValue
+          }
+        }
+
+        Write-Host "$($functionKeyValueObjects.Count) function keys found in total."
+
+        if ($functionKeyValueObjects.Count -GT 1)
+        {
+          $baseValue = $functionKeyValueObjects[0]
+          foreach ($funcKey in $functionKeyValueObjects)
+          {
+            if ($baseValue -NE $funcKey)
+            {
+              Write-Host "##vso[task.logissue type=error]Function key values are not all the same."
+              exit 1
+            }
+          }
+        }
+        elseif ($functionKeyValueObjects.Count -EQ 0){
+          Write-Host "##vso[task.logissue type=error]Function key values are empty. Please check the parameters"
+          exit 1
+        }
+
+        Write-Host "Function keys validating completed."

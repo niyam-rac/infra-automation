@@ -1,0 +1,22 @@
+parameters:
+  - name: artifactName
+    displayName: 'artifactName'
+    type: string
+  - name: fileCopyPattern
+    displayName: 'fileCopyPattern'
+    type: object
+
+steps:
+  - task: CopyFiles@2
+    displayName: 'Copy infra code'
+    inputs:
+      SourceFolder: '$(build.sourcesdirectory)'
+      TargetFolder: '$(build.artifactstagingdirectory)'
+      CleanTargetFolder: True
+      Contents: '${{ parameters.fileCopyPattern }}'
+
+  - task: PublishBuildArtifacts@1
+    displayName: 'Publish Artifact'
+    inputs:
+      TargetPath: '$(build.artifactstagingdirectory)'
+      artifactName: '${{ parameters.artifactName }}'

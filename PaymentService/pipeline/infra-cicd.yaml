@@ -1,31 +1,72 @@
 trigger:
-  - main # Replace 'main' with your branch name if needed
+  batch: false
+  branches:
+    include:
+      - refs/heads/main
+      - main
+  paths:
+    include:
+      - PaymentService/**
+    exclude:
+      - readme.md
+      - .gitignore
+      - .gitattribute
+      - "**/*.md"
+      - ".github/**"
+
+pr:
+  branches:
+    include:
+      - refs/heads/main
+      - main
+  paths:
+    include:
+      - PaymentService/**
+    exclude:
+      - readme.md
+      - .gitignore
+      - .gitattribute
+      - "**/*.md"
+      - ".github/**"
 
 pool:
   vmImage: "ubuntu-latest"
 
-steps:
-  # Step 1: Log a simple message
-  - task: Bash@3
-    displayName: "Log a simple message"
-    inputs:
-      targetType: "inline"
-      script: |
-        echo "Hello, Azure DevOps!"
+variables:
+  - template: ../../../shared/pipelines/variables/global-vars_v4.0.yaml
+  - template: variables/project-vars.yaml
 
-  # Step 2: Log current date and time
-  - task: Bash@3
-    displayName: "Log current date and time"
-    inputs:
-      targetType: "inline"
-      script: |
-        echo "Current date and time: $(date)"
+stages:
+  - stage: BUILD
+    displayName: "Build"
+    jobs:
+      - job: BuildInfra
+        displayName: "Publish Job"
+        steps:
+          # Step 1: Log a simple message
+          - task: Start Build and Publish Infra
+            displayName: " Start Build and Publish Infra"
+            inputs:
+              targetType: "inline"
+              script: |
+                echo "Pipeline for PaymentService in infra-automation repo has started."
 
-  # Step 3: Log environment variables
-  - task: Bash@3
-    displayName: "Log environment variables"
-    inputs:
-      targetType: "inline"
-      script: |
-        echo "Environment variables:"
-        env
+          # Step 4: Log the values from project-vars.yaml (BUILD step)
+          - task: Bash@3
+            displayName: "BUILD - Log values from project-vars.yaml"
+            inputs:
+              targetType: "inline"
+              script: |
+                echo "StaticWebsiteDomainNPE: $(StaticWebsiteDomainNPE)"
+                echo "StaticWebsiteDomainPRD: $(StaticWebsiteDomainPRD)"
+                echo "CustomDomainPrefix: $(CustomDomainPrefix)"
+                echo "ResourceGroupNameSuffix: $(ResourceGroupNameSuffix)"
+                echo "SvcAppStorageNameSuffix: $(SvcAppStorageNameSuffix)"
+
+          # Step 5: Finish with a completion message
+          - task: Bash@3
+            displayName: "Log pipeline completion"
+            inputs:
+              targetType: "inline"
+              script: |
+                echo "Pipeline for PaymentService has completed successfully."

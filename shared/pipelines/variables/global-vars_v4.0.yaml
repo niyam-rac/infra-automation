@@ -1,0 +1,26 @@
+variables:
+  PipelineUrl: 'https://dev.azure.com/racwa/$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)'
+
+  AzConnectionNPE: 'Spark Plat to Azure RACWA-IT-Non-Production'
+  AzSubscriptionIdNPE: '0a665cc4-710c-470e-93d5-ee839efb27be'
+  AzConnectionNPE2: 'Spark Plat to Azure RACWA-IT-Non-Production-2'
+  AzSubscriptionIdNPE2: 'be5438b0-b55b-4b1b-b836-aa9878adc040'
+  AzConnectionNPE3: 'Spark Plat to Azure RACWA-IT-Non-Production-3'
+  AzSubscriptionIdNPE3: 'f1addffb-2fc0-4b2a-a5f3-a4a1038afa33'
+  AzConnectionPRD: 'Spark Plat to Azure RACWA-IT-Production'
+  AzSubscriptionIdPRD: '0efb7770-c4e6-4d01-9452-fe1b32252194'
+
+  Authority: 'racwa'
+  TfStateResourceGroupNameSuffix: 'INS-SparkTerraform'
+  TfStateStorageNameSuffix: 'tfstate'
+  ApimFunctionKeyName: 'apimanagement'
+  SvcAppStagingSlotName: 'staging'
+
+  ${{ if or(eq(variables['Build.SourceBranchName'], 'main'), eq(variables['Build.SourceBranchName'], 'master'), startsWith(variables['Build.SourceBranch'], 'refs/heads/release')) }}:
+    BuildVersionSuffix: 'Release'
+    IsRelease: True
+  ${{ else }}:
+    BuildVersionSuffix: 'Staging'
+    IsRelease: False
+
+  InfraSrcFolderName: 'infra'

@@ -1,0 +1,85 @@
+parameters:
+  - name: projectAzConnection
+    displayName: 'Project Azure Connection'
+    type: string
+    default: ''
+  - name: staticWebAppName
+    displayName: 'Static Web App Name'
+    type: string
+    default: ''
+  - name: staticAppCustomDomain
+    displayName: 'Static App Custom Domain'
+    type: string
+    default: ''
+
+steps:
+  - task: AzureCLI@2
+    displayName: 'Set SWA custom domain'
+    inputs:
+      azureSubscription: ${{parameters.projectAzConnection}}
+      # As Resolve-DnsName command is not supported in pscore yet, Windows agents is required to run ps.
+      scriptType: ps
+      scriptLocation: inlineScript
+      inlineScript: |
+        $staticWebAppName = "${{parameters.staticWebAppName}}"
+        $staticAppCustomDomain = "${{parameters.staticAppCustomDomain}}"
+
+        if ([string]::IsNullOrEmpty($staticAppCustomDomain))
+        {
+            Write-Host "Custom domain is empty. Won't do anything."
+            return
+        }
+
+        # As Resolve-DnsName command does not be supported in powershell core yet, we have to use Windows agents.
+        Write-Host "Check custom domain $($staticAppCustomDomain) DNS for $($staticWebAppName)..."
+
+        $staticWebAppsExisting = (az staticwebapp list --query "[?name == '$($staticWebAppName)']") | ConvertFrom-Json
+
+        if ($staticWebAppsExisting.Count -eq 0)
+        {
+          Write-Host "Static web app not found: $($staticWebAppName)"
+          return
+        }
+
+        $hostnameResolved = (Resolve-DnsName -Name $staticAppCustomDomain -Type CNAME -ErrorAction SilentlyContinue -ErrorVariable errException)
+
+        if ($null -eq $hostnameResolved.NameHost)
+        {
+          Write-Host "CNAME DNS: $($staticAppCustomDomain) NOT FOUND."
+        }
+        elseif ($null -ne $hostnameResolved.NameHost)
+        {
+          Write-Host "Found CNAME DNS: $($hostnameResolved.NameHost)"
+
+          $queryCustomDomains = (az staticwebapp hostname list --name $staticWebAppName --query "[?domainName == '$($staticAppCustomDomain)']") | ConvertFrom-Json
+
+          $customDomainExisting = $false
+          if ($queryCustomDomains.Count -gt 0)
+          {
+            foreach ($queryCustomDomain in $queryCustomDomains)
+            {
+              if ($queryCustomDomain.domainName.ToLower() -eq $staticAppCustomDomain.ToLower())
+              {
+                $customDomainExisting = $true
+                Write-Host "Custom domain [$($staticAppCustomDomain)] already exists."
+              }
+            }
+          }
+
+          if (!$customDomainExisting)
+          {
+            $webAppDefaultHostname = (az staticwebapp show --name "$($staticWebAppName)" --query 'defaultHostname' -o tsv)
+            if ($null -ne $webAppDefaultHostname -and ($webAppDefaultHostname.ToLower() -eq $hostnameResolved.NameHost.ToLower()))
+            {
+              Write-Host "Add custom domain $($staticAppCustomDomain) to $($staticWebAppName)."
+              az staticwebapp hostname set --name $staticWebAppName --hostname $staticAppCustomDomain
+            }
+            else {
+              Write-Host "CNAME of domain $($staticAppCustomDomain) does not match the default staticapp hostname."
+            }
+          }
+        }
+        elseif (($null -ne $errException) -and ($errException.Count -gt 0))
+        {
+          Write-Host "Found error: $($errException.Exception.Message)"
+        }

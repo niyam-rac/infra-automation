@@ -1,0 +1,162 @@
+parameters:
+  - name: projectAzConnection
+    displayName: 'Project Azure Connection'
+    type: string
+    default: ''
+  - name: projectResourceGroupName
+    displayName: 'projectResourceGroupName'
+    type: string
+    default: ''
+  - name: svcAppName
+    displayName: 'svcAppName'
+    type: string
+    default: ''
+  - name: svcAppSlotName
+    displayName: 'svcAppSlotName'
+    type: string
+    default: '$(SvcAppStagingSlotName)'
+  - name: apimFunctionKeyName
+    displayName: 'apimFunctionKeyName'
+    type: string
+    default: '$(ApimFunctionKeyName)'
+  - name: envKey
+    displayName: 'envKey'
+    type: string
+    default: ''
+  - name: sharedKeyvaultName
+    displayName: 'Shared Key Vault Name'
+    type: string
+    default: ''
+  - name: sharedKeyvaultSubscriptionName
+    displayName: 'sharedKeyvaultSubscriptionName'
+    type: string
+    default: ''
+  - name: apimFunctionKeySecretNamePrefix
+    displayName: 'Apim Function Key Secret Name Prefix'
+    type: string
+    default: ''
+
+steps:
+  - task: AzureCLI@2
+    displayName: 'Set up custom function key'
+    inputs:
+      azureSubscription: ${{parameters.projectAzConnection}}
+      scriptType: pscore
+      scriptLocation: inlineScript
+      inlineScript: |
+        # Please keep in mind that the JMESPATH query is case sensitive so far, case-insensitive searching is not supported by az cli yet.
+        $svcAppResourceGroup = "${{parameters.projectResourceGroupName}}".ToUpper()
+        $svcAppName = "${{parameters.svcAppName}}".ToLower()
+        $apimFunctionKeyName = "${{parameters.apimFunctionKeyName}}".ToLower()
+        $stagingSlotName = "${{parameters.svcAppSlotName}}".ToLower()
+        $sharedKeyvaultName = "${{parameters.sharedKeyvaultName}}"
+        $sharedKeyvaultSubscriptionName = "${{parameters.sharedKeyvaultSubscriptionName}}"
+        $envKey = ("${{parameters.envKey}}").ToUpper()
+        $secretName = "${{parameters.apimFunctionKeySecretNamePrefix}}-$envKey"
+
+        if ([string]::IsNullOrEmpty($sharedKeyvaultName))
+        {
+            Write-Host "##vso[task.logissue type=error]The key vault name is empty. Please check the task parameters."
+            exit 1
+        }
+
+        $svcAppList = (az functionapp list -g $svcAppResourceGroup --query "[].{defaultHostName:defaultHostName}[? contains(defaultHostName,'$svcAppName')]") | ConvertFrom-Json
+        $svcAppExists = ($svcAppList.Count -gt 0)
+        Write-Output "Existence of the service App = $svcAppExists"
+        Write-Output "##vso[task.setvariable variable=svcAppExists;]$svcAppExists"
+        if ($svcAppExists)
+        {
+          # az keyvault cli bug: Failure while querying kv secrets by --vault-name.
+          # https://github.com/microsoft/azure-pipelines-tasks/issues/18467
+          $keyvaultId = ("https://$($sharedKeyvaultName).vault.azure.net/").ToLower()
+          Write-Host "Check if the key vault exists $($sharedKeyvaultName) ..."
+          $keyvaultList = (az keyvault list --query "[?name == '$($sharedKeyvaultName)']" --subscription $sharedKeyvaultSubscriptionName) | ConvertFrom-Json
+          $keyvaultExists = ($keyvaultList.Count -gt 0)
+
+          if (!$keyvaultExists)
+          {
+            Write-Host "##vso[task.logissue type=error]The keyvault $($sharedKeyvaultName) NOT found."
+            exit 1
+          }
+
+          Write-Host "Check if the secret $($secretName) exists in $($sharedKeyvaultName) ..."
+          $secretExisting = (az keyvault secret list --id "$($keyvaultId)" --query "[?name == '$($secretName)']") | ConvertFrom-Json
+
+          if ($secretExisting.Count -eq 0)
+          {
+            Write-Host "Secret $($secretName) not found in keyvault. Try generating a random string and store it as the key into the key vault."
+            $funcKeyValueRadom = ([Convert]::ToBase64String([System.Text.Encoding]::ASCII.GetBytes("$(New-Guid)$(New-Guid)"))).Substring(0,56)
+            az keyvault secret set --name "$($secretName)" --vault-name "$($sharedKeyvaultName)" --value "$($funcKeyValueRadom)" -o none
+          }
+
+          Write-Host "Read $($secretName) value from the key vault..."
+          $funcKeyValueInKeyvault = (az keyvault secret show --name "$($secretName)" --vault-name "$($sharedKeyvaultName)" | ConvertFrom-Json).value
+          if ([string]::IsNullOrEmpty($funcKeyValueInKeyvault))
+          {
+            Write-Host "##vso[task.logissue type=error]Reading the function key from the keyvault failed. The function key value is empty. "
+            exit 1
+          }
+
+          $apimFunctionKeyValue = (az functionapp keys list -g "$($svcAppResourceGroup)" -n "$($svcAppName)" --query "functionKeys.$($apimFunctionKeyName)") | ConvertFrom-Json
+          $apimFunctionKeyExists = ![string]::IsNullOrEmpty($apimFunctionKeyValue)
+          Write-Output "Existence of the custom APIM function key on default slot = $apimFunctionKeyExists"
+
+          if ($apimFunctionKeyExists -AND ($apimFunctionKeyValue -NE $funcKeyValueInKeyvault))
+          {
+            Write-Host "##vso[task.logissue type=error]The custom apim function key of the app does NOT match the value in key vault."
+            exit 1
+          }
+          elseif (!$apimFunctionKeyExists) {
+            Write-Output "Custom function key not found, set the key now."
+            az functionapp keys set -g $svcAppResourceGroup -n $svcAppName --key-type functionKeys --key-name $apimFunctionKeyName --key-value "$funcKeyValueInKeyvault" -o none
+          }
+
+          if (![string]::IsNullOrEmpty($stagingSlotName))
+          {
+            Write-Output "Check if the staging slot enabled and exists..."
+            $stagingSlotList = (az functionapp deployment slot list -n $svcAppName -g $svcAppResourceGroup) | ConvertFrom-Json
+            $stagingSlotExists = ($stagingSlotList.Count -gt 0)
+            Write-Output "Existence of the $($stagingSlotName) slot = $($stagingSlotExists)"
+
+            if ($stagingSlotExists)
+            {
+              $stagingSlotApimFunctionKeyValue = (az functionapp keys list -g "$($svcAppResourceGroup)" -n "$($svcAppName)" --slot "$($stagingSlotName)" --query "functionKeys.$($apimFunctionKeyName)") | ConvertFrom-Json
+              $stagingSlotApimFunctionKeyExists = ![string]::IsNullOrEmpty($stagingSlotApimFunctionKeyValue)
+              Write-Output "Existence of the custom APIM function key on $($stagingSlotName) slot = $($stagingSlotApimFunctionKeyExists)"
+
+              if ($stagingSlotApimFunctionKeyExists -AND ($stagingSlotApimFunctionKeyValue -NE $funcKeyValueInKeyvault))
+              {
+                Write-Host "##vso[task.logissue type=error]The custom apim function key on the $($stagingSlotName) slot of the app does NOT match the value in key vault."
+                exit 1
+              }
+              elseif (!$stagingSlotApimFunctionKeyExists) {
+
+                $stagingSlotState = ((az functionapp show -g $svcAppResourceGroup -n $svcAppName --slot $stagingSlotName) | ConvertFrom-Json).state
+                if ($stagingSlotState -EQ "Stopped")
+                {
+                  # If the staging slot is stopped, try starting the slot to apply the function key
+                  az functionapp start -g $svcAppResourceGroup -n $svcAppName --slot $stagingSlotName
+                  Start-Sleep -Seconds 60
+                }
+
+                Write-Output "The custom function key not found on the $($stagingSlotName) slot, set up the key now."
+                az functionapp keys set -g $svcAppResourceGroup -n $svcAppName --slot $stagingSlotName --key-type functionKeys --key-name $apimFunctionKeyName --key-value "$funcKeyValueInKeyvault" -o none
+
+                # Set up the slot state back
+                if ($stagingSlotState -EQ "Stopped")
+                {
+                  # If the staging slot is stopped, try starting the slot to apply the function key
+                  az functionapp stop -g $svcAppResourceGroup -n $svcAppName --slot $stagingSlotName
+                }
+              }
+            }
+            else {
+              Write-Host "##vso[task.logissue type=error]The $($stagingSlotName) slot enabled for the function app, but not found in Azure. Please review the deployment."
+              exit 1
+            }
+          }
+        }
+        else {
+          Write-Output "The service App is NOT FOUND. Please review the infra code."
+          Write-Output "##vso[task.logissue type=warning;]Warning: The service App is NOT FOUND. Please review the infra code."
+        }

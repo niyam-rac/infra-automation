@@ -1,0 +1,227 @@
+parameters:
+  - name: projectAzConnection
+    displayName: 'Project Azure Connection Name'
+    type: string
+  - name: tfstateAzConnection
+    displayName: 'Azure Connection'
+    type: string
+  - name: envKey
+    displayName: 'env Key'
+    type: string
+  - name: regionKey
+    displayName: 'Region Key'
+    type: string
+  - name: tfStateRegionKey
+    displayName: 'Primary Region Key'
+    type: string
+    default: 'dcc'
+  - name: projectResourceGroupName
+    displayName: 'Resource Group Name'
+    type: string
+  - name: faStorageAccountName
+    displayName: 'App Storage Account Name'
+    type: string
+  - name: dataStorageAccountName
+    displayName: 'Data Storage Account Name'
+    type: string
+    default: ''
+  - name: dataStorageResourceGroup
+    displayName: 'Data Storage Account Resource Group'
+    type: string
+    default: ''
+  - name: releaseVersion
+    displayName: 'Release Version'
+    type: string
+    default: '$(Build.BuildNumber)'
+  - name: infraArtifactName
+    displayName: 'Infra Artifact Name'
+    type: string
+  - name: projectInfraVersion
+    displayName: 'Project Infra Version'
+    type: string
+  - name: projectFolder
+    displayName: 'Project Folder'
+    type: string
+  - name: tfStateStorageSubscriptionId
+    displayName: 'State Storage Subscription Id'
+    type: string
+  - name: tfStateContainerNamePrefix
+    displayName: 'Terraform State Container Name'
+    type: string
+    default: ''
+  - name: terraformCommand
+    displayName: 'Terraform Command'
+    type: string
+    default: 'plan'
+  - name: staticWebAppName
+    displayName: 'Static Web App Name'
+    type: string
+    default: ''
+  - name: staticAppCustomDomain
+    displayName: 'Static App Custom Domain'
+    type: string
+    default: ''
+  - name: deploymentSteps
+    displayName: 'Deployment Step'
+    type: object
+    default:
+      - 'essentials'
+      - 'apps'
+  - name: authority
+    displayName: 'Authority'
+    type: string
+    default: '$(Authority)'
+  - name: tfImportResources
+    displayName: 'tfImportResources'
+    type: boolean
+    default: false
+  - name: tfStateResourceGroupNameSuffix
+    displayName: 'Tf State Resource Group Name Suffix'
+    type: string
+    default: '$(TfStateResourceGroupNameSuffix)'
+  - name: tfStateStorageNameSuffix
+    displayName: 'Tf State Storage Name Suffix'
+    type: string
+    default: '$(TfStateStorageNameSuffix)'
+  - name: svcAppName
+    displayName: 'svcAppName'
+    type: string
+  - name: apimFunctionKeySecretNamePrefix
+    displayName: 'apimFunctionKeySecretNamePrefix'
+    type: string
+  - name: projectResourceGroupNameFormat
+    displayName: 'projectResourceGroupNameFormat'
+    type: string
+  - name: svcAppNameFormat
+    displayName: 'svcAppNameFormat'
+    type: string
+  - name: regionsForFuncKeysToBeValidated
+    displayName: 'regionsForFuncKeysToBeValidated'
+    type: string
+  - name: forceAppInfraRedeploy
+    displayName: 'forceAppInfraRedeploy'
+    type: boolean
+  - name: isPrimaryRegion
+    displayName: 'isPrimaryRegion'
+    type: boolean
+  - name: parentModuleNamePrefix
+    displayName: 'parentModuleNamePrefix'
+    type: string
+  - name: logAnalyticsName
+    displayName: 'logAnalyticsName'
+    type: string
+  - name: appInsightsName
+    displayName: 'appInsightsName'
+    type: string
+  - name: appServicePlanName
+    displayName: 'appServicePlanName'
+    type: string
+    default: ''
+  - name: keyVaultName
+    displayName: 'keyVaultName'
+    type: string
+    default: ''
+  - name: functionKeyKeyVaultName
+    displayName: 'functionKeyKeyVaultName'
+    type: string
+    default: ''
+  - name: userManagedIdentityName
+    displayName: 'userManagedIdentityName'
+    type: string
+  - name: apimName
+    displayName: 'apimName'
+    type: string
+  - name: svcAppStagingSlotName
+    displayName: 'Service App Staging Slot Name'
+    type: string
+    default: '$(SvcAppStagingSlotName)'
+  - name: githubActionsIdentityName
+    displayName: 'Github Actions Identity Name'
+    type: string
+
+steps:
+  - task: CopyFiles@2
+    displayName: 'Copy infra files to working folder'
+    inputs:
+      SourceFolder: '$(Pipeline.Workspace)/${{ parameters.infraArtifactName }}'
+      TargetFolder: '$(Build.SourcesDirectory)'
+      CleanTargetFolder: False
+
+  # If command == plan, check the existence of the storage container for state files
+  - ${{ if eq(parameters.terraformCommand, 'plan') }}:
+      - template: utilities/azure-check-storage-container-existence_v3.0.yaml
+        parameters:
+          azConnection: '${{ parameters.tfstateAzConnection }}'
+          resourceGroupName: ${{ upper(format('{0}-{1}-ARG-{2}-{3}', parameters.authority, parameters.tfStateRegionKey, parameters.envKey, parameters.tfStateResourceGroupNameSuffix)) }}
+          storageAccountName: ${{ lower(format('raci{0}sta{1}{2}', parameters.tfStateRegionKey, parameters.envKey, parameters.tfStateStorageNameSuffix)) }}
+          containerName: ${{ lower(format('{0}-{1}-{2}', parameters.tfStateContainerNamePrefix, parameters.regionKey, parameters.envKey)) }}
+
+  - task: TerraformInstaller@1
+    displayName: 'TF install'
+    inputs:
+      terraformVersion: latest
+
+  - ${{ each deploymentStep in parameters.deploymentSteps }}:
+      - template: utilities/infra-deploy-terraform_v4.0.yaml
+        parameters:
+          projectAzConnection: '${{ parameters.projectAzConnection }}'
+          envKey: '${{ parameters.envKey }}'
+          regionKey: '${{ parameters.regionKey }}'
+          deploymentStep: '${{ deploymentStep }}'
+          infraCodeDirectory: '${{ parameters.ProjectFolder }}/${{ parameters.projectInfraVersion }}/infra'
+          terraformCommand: '${{ parameters.terraformCommand }}'
+          tfImportResources: ${{ parameters.tfImportResources }}
+          tfstateAzConnection: '${{ parameters.tfstateAzConnection }}'
+          tfstateResourceGroupName: ${{ upper(format('{0}-{1}-ARG-{2}-{3}', parameters.authority, parameters.tfStateRegionKey, parameters.envKey, parameters.tfStateResourceGroupNameSuffix)) }}
+          tfstateStorageAccountName: ${{ lower(format('raci{0}sta{1}{2}', parameters.tfStateRegionKey, parameters.envKey, parameters.tfStateStorageNameSuffix)) }}
+          tfstateStorageSubscriptionId: '${{ parameters.tfStateStorageSubscriptionId }}'
+          tfstateContainerName: ${{ lower(format('{0}-{1}-{2}', parameters.tfStateContainerNamePrefix, parameters.regionKey, parameters.envKey)) }}
+          tfstateKeyFileName: ${{ lower(format('{0}_{1}_{2}_{3}_{4}.tfstate', parameters.tfStateContainerNamePrefix, parameters.regionKey, parameters.envKey, parameters.projectInfraVersion, deploymentStep)) }}
+          releaseVersion: '${{ parameters.releaseVersion }}'
+          projectResourceGroupName: '${{ parameters.projectResourceGroupName }}'
+          faStorageAccountName: '${{ parameters.faStorageAccountName }}'
+          dataStorageAccountName: '${{ parameters.dataStorageAccountName }}'
+          dataStorageResourceGroup: '${{parameters.dataStorageResourceGroup}}'
+          forceAppInfraRedeploy: ${{ parameters.forceAppInfraRedeploy }}
+          svcAppName: '${{ parameters.svcAppName }}'
+          stagingSlotName: '${{ parameters.svcAppStagingSlotName }}'
+          staticWebAppName: '${{ parameters.staticWebAppName }}'
+          isPrimaryRegion: ${{ parameters.isPrimaryRegion }}
+          parentModuleNamePrefix: '${{ parameters.parentModuleNamePrefix }}'
+          logAnalyticsName: '${{ parameters.logAnalyticsName }}'
+          appInsightsName: '${{ parameters.appInsightsName }}'
+          appServicePlanName: '${{ parameters.appServicePlanName }}'
+          keyVaultName: '${{ parameters.keyVaultName }}'
+          userManagedIdentityName: '${{ parameters.userManagedIdentityName }}'
+          apimName: '${{ parameters.apimName }}'
+          projectName: '${{ parameters.projectFolder }}'
+          githubActionsIdentityName: '${{ parameters.githubActionsIdentityName }}'
+
+  # As Resolve-DnsName command is not supported in pscore yet, Windows agents is required to run ps.
+  - ${{ if eq(parameters.terraformCommand, 'apply') }}:
+      - ${{ if parameters.isPrimaryRegion }}:
+          - template: utilities/azure-set-swa-custom-domain_v3.0.yaml
+            parameters:
+              projectAzConnection: '${{ parameters.projectAzConnection }}'
+              staticWebAppName: '${{ lower(parameters.staticWebAppName) }}'
+              staticAppCustomDomain: '${{ lower(parameters.staticAppCustomDomain) }}'
+
+      - template: utilities/azure-set-custom-function-key_v3.1.yaml
+        parameters:
+          projectAzConnection: '${{ parameters.projectAzConnection }}'
+          projectResourceGroupName: '${{ parameters.projectResourceGroupName }}'
+          svcAppSlotName: '${{ parameters.svcAppStagingSlotName }}'
+          apimFunctionKeyName: '$(ApimFunctionKeyName)'
+          envKey: '${{ parameters.envKey }}'
+          svcAppName: '${{parameters.svcAppName}}'
+          keyVaultName: '${{parameters.functionKeyKeyVaultName}}'
+          apimFunctionKeySecretNamePrefix: '${{parameters.apimFunctionKeySecretNamePrefix}}'
+
+      - template: utilities/infra-validate-functionkeys_v3.0.yaml
+        parameters:
+          projectAzConnection: '${{ parameters.projectAzConnection }}'
+          projectResourceGroupNameFormat: '${{ parameters.projectResourceGroupNameFormat }}'
+          svcAppNameFormat: '${{ parameters.svcAppNameFormat }}'
+          regionsForFuncKeysToBeValidated: '${{ parameters.regionsForFuncKeysToBeValidated }}'
+          apimFunctionKeyName: '$(ApimFunctionKeyName)'
+          stagingSlotName: '${{ parameters.svcAppStagingSlotName }}'

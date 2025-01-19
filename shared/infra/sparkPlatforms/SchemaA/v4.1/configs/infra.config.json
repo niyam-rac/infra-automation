@@ -1,0 +1,162 @@
+{
+  "common": {
+    "authority": "racwa",
+    "svcAppStagingSlotName": "staging",
+    "resourceTagsShared": {
+      "Company": "Insurance",
+      "CostCentre": "0104",
+      "BusinessUnit": "RACI Business Systems Services",
+      "Department": "Service Delivery"
+    },
+    "svcAppIpRestrictionsInternalShared": [
+      {
+        "action": "Allow",
+        "ip": "103.68.204.0/24",
+        "name": "Allow-Office-01",
+        "priority": "351"
+      },
+      {
+        "action": "Allow",
+        "ip": "49.255.131.22/32",
+        "name": "Allow-Office-02",
+        "priority": "352"
+      },
+      {
+        "action": "Allow",
+        "ip": "20.53.89.138/32",
+        "name": "Allow-CoreFirewall-DCC",
+        "priority": "361"
+      },
+      {
+        "action": "Allow",
+        "ip": "52.147.32.154/32",
+        "name": "Allow-CoreFirewall-DCD",
+        "priority": "362"
+      },
+      {
+        "action": "Allow",
+        "ip": "20.53.198.227/32",
+        "name": "Allow-GlobalProtect-01",
+        "priority": "401"
+      },
+      {
+        "action": "Allow",
+        "ip": "20.53.187.24/32",
+        "name": "Allow-GlobalProtect-02",
+        "priority": "402"
+      },
+      {
+        "action": "Allow",
+        "ip": "20.53.186.197/32",
+        "name": "Allow-GlobalProtect-03",
+        "priority": "403"
+      },
+      {
+        "action": "Allow",
+        "ip": "20.190.114.114/32",
+        "name": "Allow-GlobalProtect-04",
+        "priority": "404"
+      },
+      {
+        "action": "Allow",
+        "ip": "20.70.108.11/32",
+        "name": "Allow-GlobalProtect-05",
+        "priority": "405"
+      },
+      {
+        "action": "Allow",
+        "ip": "20.70.107.116/32",
+        "name": "Allow-GlobalProtect-06",
+        "priority": "406"
+      }
+    ]
+  },
+  "dev": {
+    "resourceTagsEnv": {
+      "Environment": "dev"
+    },
+    "svcAppIpRestrictionsAPIMShared": [
+      {
+        "action": "Allow",
+        "ip": "13.73.192.164/32",
+        "name": "Allow-APIM-DEV",
+        "priority": "300"
+      },
+      {
+        "action": "Allow",
+        "ip": "20.37.218.98/32",
+        "name": "Allow-APIM-DEV-NEW",
+        "priority": "301"
+      }
+    ]
+  },
+  "sit": {
+    "resourceTagsEnv": {
+      "Environment": "sit"
+    },
+    "svcAppIpRestrictionsAPIMShared": [
+      {
+        "action": "Allow",
+        "ip": "13.70.144.159/32",
+        "name": "Allow-APIM-SIT",
+        "priority": "300"
+      },
+      {
+        "action": "Allow",
+        "ip": "52.243.97.11/32",
+        "name": "Allow-APIM-SIT-NEW",
+        "priority": "301"
+      }
+    ]
+  },
+  "uat": {
+    "resourceTagsEnv": {
+      "Environment": "uat"
+    },
+    "svcAppIpRestrictionsAPIMShared": [
+      {
+        "action": "Allow",
+        "ip": "13.75.181.248/32",
+        "name": "Allow-APIM-UAT",
+        "priority": "300"
+      },
+      {
+        "action": "Allow",
+        "ip": "20.188.205.156/32",
+        "name": "Allow-APIM-UAT-NEW",
+        "priority": "301"
+      }
+    ]
+  },
+  "prd": {
+    "resourceTagsEnv": {
+      "Environment": "prd"
+    },
+    "svcAppIpRestrictionsAPIMShared": [
+      {
+        "action": "Allow",
+        "ip": "13.70.92.16/32",
+        "name": "Allow-APIM-PRD-DCC",
+        "priority": "300"
+      },
+      {
+        "action": "Allow",
+        "ip": "13.70.181.72/32",
+        "name": "Allow-APIM-PRD-DCD",
+        "priority": "301"
+      },
+      {
+        "action": "Allow",
+        "ip": "13.75.149.194/32",
+        "name": "Allow-APIM-PRD-DCC-NEW",
+        "priority": "302"
+      },
+      {
+        "action": "Allow",
+        "ip": "13.73.108.150/32",
+        "name": "Allow-APIM-PRD-DCD-NEW",
+        "priority": "303"
+      }
+    ]
+  }
+}
