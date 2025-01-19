@@ -33,7 +33,7 @@ pool:
   vmImage: "ubuntu-latest"
 
 variables:
-  - template: ../../../shared/pipelines/variables/global-vars_v4.0.yaml
+  # - template: ../../../shared/pipelines/variables/global-vars_v4.0.yaml
   - template: variables/project-vars.yaml
 
 stages:
@@ -52,7 +52,7 @@ stages:
                 echo "Pipeline for PaymentService in infra-automation repo has started."
 
           # Step 4: Log the values from project-vars.yaml (BUILD step)
-          - task: Bash@3
+          - task: Display all values
             displayName: "BUILD - Log values from project-vars.yaml"
             inputs:
               targetType: "inline"
