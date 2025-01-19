@@ -49,3 +49,70 @@ stages:
             parameters:
               artifactName: "$(InfraArtifactName)"
               fileCopyPattern: "$(InfraFileCopyPattern)"
+
+  # DEV
+  - stage: DEV_PLAN
+    displayName: "DEV Plan"
+    dependsOn: ["BUILD"]
+    variables:
+      projectAzConnection: "$(AzConnectionNPE)"
+      tfstateAzConnection: "$(AzConnectionNPE)"
+      tfStateStorageSubscriptionId: "$(AzSubscriptionIdNPE)"
+      envKey: "dev"
+      terraformCommand: "plan"
+      staticAppCustomDomain: "$(CustomDomainPrefix)-$(envKey).$(StaticWebsiteDomainNPE)"
+      userManagedIdentityName: "$(SvcAppUserManagedIdentityNameNPE)"
+      # tfImportResources = true --> Only required when the project resources already created on Azure prior to the first time run of terraform pipeline
+      # After the resources being imported to the TF state file, this value can be set to false
+      tfImportResources: false
+    jobs:
+      - deployment: DEV_Plan
+        displayName: "DEV Plan"
+        environment: VALIDATE-INFRA
+        variables:
+          regionKey: "dcc"
+          tfStateRegionKey: "dcc"
+          isPrimaryRegion: true
+          primaryRegionKey: "dcc"
+          regionsForFuncKeysToBeValidated: "dcc"
+        workspace:
+          clean: all
+        strategy:
+          runOnce:
+            deploy:
+              steps:
+                - template: "../../../shared/pipelines/templates/infra-deploy-tasks_v4.1.yaml"
+                  parameters:
+                    projectAzConnection: "${{ variables.projectAzConnection }}"
+                    envKey: "$(envKey)"
+                    regionKey: "$(regionKey)"
+                    tfStateRegionKey: "$(tfStateRegionKey)"
+                    infraArtifactName: "$(InfraArtifactName)"
+                    projectResourceGroupName: ${{ upper('$(Authority)-$(regionKey)-ARG-$(envKey)-$(ResourceGroupNameSuffix)') }}
+                    projectInfraVersion: "$(ProjectInfraVersion)"
+                    projectFolder: "$(ProjectFolder)"
+                    tfImportResources: ${{ variables.tfImportResources }}
+                    tfstateAzConnection: "${{ variables.tfstateAzConnection }}"
+                    tfStateStorageSubscriptionId: "${{ variables.tfStateStorageSubscriptionId }}"
+                    tfStateContainerNamePrefix: "$(TfStateContainerNamePrefix)"
+                    terraformCommand: "${{ variables.terraformCommand }}"
+                    staticWebAppName: ""
+                    staticAppCustomDomain: "${{ variables.staticAppCustomDomain }}"
+                    faStorageAccountName: ${{ lower('$(Authority)$(regionKey)sta$(envKey)$(SvcAppStorageNameSuffix)') }}
+                    dataStorageAccountName: ${{ lower('$(Authority)$(regionKey)sta$(envKey)$(DataStorageNameSuffix)') }}
+                    svcAppName: ${{ lower('$(Authority)$(regionKey)fa$(envKey)$(SvcAppNameSuffix)') }}
+                    apimFunctionKeySecretNamePrefix: "$(SvcAppApimFunctionKeySecretNamePrefix)"
+                    projectResourceGroupNameFormat: "$(Authority)-{REGIONKEY}-ARG-$(envKey)-$(ResourceGroupNameSuffix)"
+                    svcAppNameFormat: "$(Authority){REGIONKEY}fa$(envKey)${{lower(variables.SvcAppNameSuffix)}}"
+                    regionsForFuncKeysToBeValidated: "${{ variables.regionsForFuncKeysToBeValidated }}"
+                    forceAppInfraRedeploy: ${{ parameters.forceAppInfraRedeploy }}
+                    isPrimaryRegion: ${{ variables.isPrimaryRegion }}
+                    parentModuleNamePrefix: "$(ParentModuleNamePrefix)"
+                    logAnalyticsName: ${{ lower('$(Authority)-$(regionKey)-oms-$(envKey)-$(ProjectKey)') }}
+                    appInsightsName: ${{ lower('$(Authority)-$(regionKey)-ain-$(envKey)-$(ProjectKey)') }}
+                    appServicePlanName: ${{ lower('$(Authority)-$(regionKey)-asp-$(envKey)-$(ProjectKey)') }}
+                    keyVaultName: ${{ lower('$(Authority)-$(regionKey)-key-$(envKey)-$(KeyvaultNameSuffix)') }}
+                    functionKeyKeyVaultName: ${{ lower('$(Authority)-$(primaryRegionKey)-key-$(envKey)-$(KeyvaultNameSuffix)') }}
+                    userManagedIdentityName: "${{ variables.userManagedIdentityName }}"
+                    apimName: ${{ upper('$(Authority)-DCC-APM-$(envKey)-001') }}
+                    githubActionsIdentityName: ${{ lower('github-actions-$(BFFRepositoryName)-$(envKey)') }}
