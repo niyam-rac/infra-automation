@@ -1,25 +1,3 @@
-# parameters:
-#   - name: artifactName
-#     displayName: 'artifactName'
-#     type: string
-#   - name: fileCopyPattern
-#     displayName: 'fileCopyPattern'
-#     type: object
-
-# steps:
-#   - task: CopyFiles@2
-#     displayName: 'Copy infra code'
-#     inputs:
-#       SourceFolder: '$(build.sourcesdirectory)'
-#       TargetFolder: '$(build.artifactstagingdirectory)'
-#       CleanTargetFolder: True
-#       Contents: '${{ parameters.fileCopyPattern }}'
-
-#   - task: PublishBuildArtifacts@1
-#     displayName: 'Publish Artifact'
-#     inputs:
-#       TargetPath: '$(build.artifactstagingdirectory)'
-#       artifactName: '${{ parameters.artifactName }}'
 parameters:
   - name: artifactName
     displayName: "artifactName"
@@ -29,13 +7,6 @@ parameters:
     type: object
 
 steps:
-  # Debug: List contents of the source directory
-  - script: |
-      echo "Listing contents of $(build.sourcesdirectory):"
-      ls -R $(build.sourcesdirectory)
-    displayName: "Debug: List source folder contents"
-
-  # Copy files
   - task: CopyFiles@2
     displayName: "Copy infra code"
     inputs:
