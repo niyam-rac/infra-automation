@@ -13,7 +13,7 @@ variables:
   InfraArtifactName: "infra"
   InfraFileCopyPattern: |
     shared/infra/**a
-    $(ProjectFolder)/$(ProjectInfraVersion)/infra/**
+    $(ProjectFolder)/infra/**
 
   ProjectKey: "paymentservice"
   StaticWebsiteDomainNPE: "paymentservice.ractest.com.au"
