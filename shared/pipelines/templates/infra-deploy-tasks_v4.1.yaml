@@ -140,12 +140,17 @@ parameters:
     type: string
 
 steps:
-  - task: CopyFiles@2
-    displayName: "Copy infra files to working folder"
-    inputs:
-      SourceFolder: "$(Pipeline.Workspace)/${{ parameters.infraArtifactName }}"
-      TargetFolder: "$(Build.SourcesDirectory)"
-      CleanTargetFolder: False
+  # - task: CopyFiles@2
+  #   displayName: "Copy infra files to working folder"
+  #   inputs:
+  #     SourceFolder: "$(Pipeline.Workspace)/${{ parameters.infraArtifactName }}"
+  #     TargetFolder: "$(Build.SourcesDirectory)"
+  #     CleanTargetFolder: False
+
+  - script: |
+      echo "Listing contents of Pipeline.Workspace:"
+      ls -R "$(Pipeline.Workspace)"
+    displayName: "List Workspace Contents"
 
   # # If command == plan, check the existence of the storage container for state files
   # - ${{ if eq(parameters.terraformCommand, 'plan') }}:
