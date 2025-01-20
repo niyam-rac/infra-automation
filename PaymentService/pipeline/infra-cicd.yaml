@@ -75,7 +75,7 @@ stages:
       terraformCommand: "plan"
       staticAppCustomDomain: "$(CustomDomainPrefix)-$(envKey).$(StaticWebsiteDomainNPE)"
       userManagedIdentityName: "$(SvcAppUserManagedIdentityNameNPE)"
-      # tfImportResources = true --> Only required when the project resources already created on Azure prior to the first time run of terraform pipeline
+      # tfImportResources = true --> Required when the project resources already created on Azure prior to the first time run of terraform pipeline
       # After the resources being imported to the TF state file, this can be set to false
       tfImportResources: false
     jobs:
