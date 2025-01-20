@@ -1,0 +1,51 @@
+{
+  "common": {
+    "resourceGroupNameSuffix": "226",
+    "enableStaticWebApp": false,
+    "projectKey": "claimscommsinboundv2",
+    "keyvaultNameSuffix": "ccinv2",
+    "svcAppNameSuffix": "ccinv2",
+    "svcAppOperatingSystem": "Linux",
+    "svcAppStorageNameSuffix": "ccinv2",
+    "svcAppOutboundIdentityType": "UserAssigned",
+    "svcAppInboundAuthEnabled": true,
+    "svcAppStagingSlotEnabled": true,
+    "svcAppIpRestrictionEnabled": true,
+    "svcAppFunctionExtVersion": "~4",
+    "appStackLanguageVersion": "8.0",
+    "dotnetIsolatedRuntime": true,
+    "dataStorageNameSuffix": "ccindata",
+    "dataStorageRGNameSuffix": "226",
+    "dataStorageAccountHierarchicalNamespaceEnabled": false,
+    "managedIdentityNameSuffix": "ins-ccin",
+    "bffRepositoryName": "raci-claims-comms-inbound",
+    "resourceTagsProject": {
+      "DisplayName": "Claims Comms Inbound",
+      "BusinessService": "Insurance-Claims-Comms-Inbound"
+    }
+  },
+  "dev": {
+    "useExistingAppServicePlan": false,
+    "appServicePlanSku": "Y1",
+    "svcAppIpRestrictions": []
+  },
+  "sit": {
+    "useExistingAppServicePlan": false,
+    "appServicePlanSku": "Y1",
+    "svcAppIpRestrictions": []
+  },
+  "uat": {
+    "useExistingAppServicePlan": true,
+    "appServicePlanNameSuffix": "spark-001",
+    "appServicePlanRgNameSuffix": "260B",
+    "appServicePlanSku": "P2mv3",
+    "svcAppIpRestrictions": []
+  },
+  "prd": {
+    "useExistingAppServicePlan": true,
+    "appServicePlanNameSuffix": "spark-001",
+    "appServicePlanRgNameSuffix": "260B",
+    "appServicePlanSku": "P2mv3",
+    "svcAppIpRestrictions": []
+  }
+}
