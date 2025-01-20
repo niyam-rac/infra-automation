@@ -1,6 +1,6 @@
 variables:
   PipelineUrl: "https://dev.azure.com/niyambhat/$(System.TeamProject)/_build/results?buildId=$(Build.BuildId)"
-  AzConnectionNPE: "Visual Studio Professional Subscription"
+  AzConnectionNPE: "Platform to Visual Studio Professional Subscription"
   AzSubscriptionIdNPE: "8d3156a0-c58b-45d7-b51d-dfe7c115273c"
   Authority: "niyam"
   TfStateResourceGroupNameSuffix: "NiyamSparkTerraform"
